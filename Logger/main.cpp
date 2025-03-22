@@ -238,11 +238,7 @@ int main()
 	int arr[] = { 1, 2, 3 };
 	LOG_MESSAGE("Array pointer - ", arr);
 
-	LOG_MESSAGE(
-		"Many arguments: ",
-		1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
-		"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"
-	);
+
 
 	LOG_MESSAGE("C++20 format test - ", std::format("Formatted: {}", 42));
 
@@ -254,12 +250,28 @@ int main()
 	std::array<bool, 4> ArrayB= { false, true, false, true };
 	LOG_WARNING("Array Bools: ", ArrayB);
 
-	std::unordered_map<int, bool> UnorderedMap;
-	UnorderedMap[0] = false;
-	UnorderedMap[1] = true;
-	UnorderedMap[22] = false;
-	UnorderedMap[111] = false;
-	LOG_WARNING("Unordered Map ", UnorderedMap);
+	std::unordered_map<int, bool> UnorderedMapIntBool;
+	UnorderedMapIntBool[0] = false;
+	UnorderedMapIntBool[1] = true;
+	UnorderedMapIntBool[22] = false;
+	UnorderedMapIntBool[111] = false;
+	LOG_WARNING("Unordered Map ", UnorderedMapIntBool);
+
+	std::unordered_map<std::string, std::vector<float>> UnorderedMapStringVector;
+	UnorderedMapStringVector["ODIN"].push_back(15.6666f);
+	UnorderedMapStringVector["ODIN"].push_back(666.6666f);
+	UnorderedMapStringVector["ODIN"].push_back(999.6666f);
+	UnorderedMapStringVector["ODIN"].push_back(555555.6666f);
+	UnorderedMapStringVector["DVA"].push_back(0.22222f);
+	UnorderedMapStringVector["DVA"].push_back(0.23223f);
+	UnorderedMapStringVector["DVA"].push_back(0.555522f);
+	LOG_ERROR(
+		"Many arguments: ",
+		1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "\n",
+		"ERROR ", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "\t", false, 1 > 0, nullptr, NULL, "ZOPA", ' ', "", "END", "\n",
+		UnorderedMapIntBool, "\n",
+		UnorderedMapStringVector
+	);
 
 	std::unique_ptr<TestStruct> testUnique = std::make_unique<TestStruct>();
 	std::unique_ptr<TestStruct> testUniqueNull = nullptr;
