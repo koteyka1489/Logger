@@ -1,31 +1,38 @@
-#include "Windows.h"
+﻿#include "Windows.h"
 #include "string"
 #include <concepts>
 #include <type_traits>
 #include <format>
 #include <limits>
+#include <unordered_map>
+#include <vector>
+#include <map>
+#include <deque>
+#include <list>
+#include <array>
 
 namespace Log
 {
 	namespace details
 	{
+
 		static std::string Logs()
 		{
-			return ".";
+			return "";
 		}
 
 		template <typename T>
 			requires std::is_convertible_v<T, std::string> &&
 			(!std::is_same_v<std::decay_t<T>, void*>) &&
 			(!std::is_same_v<std::decay_t<T>, std::nullptr_t>)
-			static std::string Logs(T arg)
+		static std::string Logs(T arg)
 		{
 			return std::string(arg);
 		}
 
 		template <typename T>
 			requires std::is_same_v<std::decay_t<T>, std::nullptr_t>
-			static std::string Logs(T arg)
+		static std::string Logs(T arg)
 		{
 			return " IS NULLPTR";
 		}
@@ -48,7 +55,7 @@ namespace Log
 			}
 			else
 			{
-				return std::string(" IS NULLPTR");
+				return std::string(" IS NULL PTR");
 			}
 		}
 
@@ -77,15 +84,69 @@ namespace Log
 		}
 
 
+		template <>
+		static std::string Logs<char>(char arg)
+		{
+			return std::string(1, arg);
+		}
+	
+		template <>
+		static std::string Logs<wchar_t>(wchar_t arg)
+		{
+			return std::string(1, static_cast<char>(arg)); 
+		}
+
+		template <>
+		static std::string Logs<char16_t>(char16_t arg)
+		{
+			return std::string(1, static_cast<char>(arg)); 
+		}
+
+		template <>
+		static std::string Logs<char32_t>(char32_t arg)
+		{
+			return std::string(1, static_cast<char>(arg)); 
+		}
+
+		template <typename Key, typename Value>
+		static std::string Logs(const std::pair<const Key, Value>& arg)
+		{
+			return Logs(arg.first) + ": " + Logs(arg.second);
+		}
+
+		// Contatiners handling
+		template <typename T>
+		concept Container = requires(T t)
+		{
+			t.begin();
+			t.end();
+				requires std::input_iterator<decltype(t.begin())>;
+				requires !std::is_same_v<std::decay_t<T>, std::string>;
+		};
+
+		template <typename T>
+			requires Container<T>
+		static std::string Logs(T arg)
+		{
+			std::string result = "[";
+			for (auto it = arg.begin(); it != arg.end(); ++it)
+			{
+				result += Logs(*it);
+				if (std::next(it) != arg.end())
+					result += ", ";
+			}
+			result += "]";
+			return result;
+		}
+
+		// 
 		template <typename ... Types>
 		static std::string Logs(Types ... args)
 		{
 			return (Logs(args) + ...);
 		}
 
-
-
-	}
+	} // details namespace end
 
 	template < typename ... Types>
 	static void LogWarning(Types ... args)
@@ -122,7 +183,7 @@ int main()
 	Log::LogMessage("QUAT - W ", 0.56564, " X -  ", 0.12321, " Y - ", 1, " Z - ", 0.777777777777);
 	Log::LogMessage("  ", ' ', "wdw", " ", nullptr, -556494949);
 	Log::LogMessage("Void PTR", ptrVoid, &ptrVoid, 1525555.005255555555555555);
-	//Log::LogMessage(); 
+	Log::LogMessage(); 
 	Log::LogMessage(""); 
 	Log::LogMessage("Empty string test: ", ""); 
 
@@ -145,11 +206,39 @@ int main()
 
 	Log::LogMessage("True test - ", true);
 	Log::LogMessage("False test - ", false);
-	Log::LogMessage("Expression test - ", 42 > 0); // true
-	Log::LogMessage("Expression test - ", 0 == 1); // false
+	Log::LogMessage("Expression test - ", 42 > 0); 
+	Log::LogMessage("Expression test - ", 0 == 1); 
 
+	Log::LogMessage("Char test - ", 'A');
+	Log::LogMessage("Wide char test - ", L'Ω'); 
+	Log::LogMessage("Special char test - ", '\t', " ddd"); 
+	Log::LogMessage("Non-printable char test - ", '\x01', " END"); 
 
+	int arr[] = { 1, 2, 3 };
+	Log::LogMessage("Array pointer - ", arr); 
 
+	Log::LogMessage(
+		"Many arguments: ",
+		1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+		"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"
+	);
+
+	Log::LogMessage("C++20 format test - ", std::format("Formatted: {}", 42));
+
+	std::vector<int> vecI = { 1, 2, 3, 4 };
+	std::vector<float> vecF = { 1.011f, 202.0522f, 3.000001f, 4.0017f };
+	Log::LogMessage("Vector Int: ", vecI);
+	Log::LogMessage("Vector Float: ", vecF);
+
+	std::array<bool, 4> ArrayB= { false, true, false, true };
+	Log::LogMessage("Array Bools: ", ArrayB);
+
+	std::unordered_map<int, bool> UnorderedMap;
+	UnorderedMap[0] = false;
+	UnorderedMap[1] = true;
+	UnorderedMap[22] = false;
+	UnorderedMap[111] = false;
+	Log::LogMessage("Unordered Map ", UnorderedMap);
 
 	return 1;
 }
