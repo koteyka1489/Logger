@@ -10,6 +10,7 @@
 #include <deque>
 #include <list>
 #include <array>
+#include <memory>
 
 namespace Log
 {
@@ -72,7 +73,7 @@ namespace Log
 		}
 
 		template <>
-		static std::string Logs<std::string>(std::string arg)
+		static std::string Logs<std::string&>(std::string& arg)
 		{
 			return arg;
 		}
@@ -82,7 +83,6 @@ namespace Log
 		{
 			return " IS VOID PTR ";
 		}
-
 
 		template <>
 		static std::string Logs<char>(char arg)
@@ -114,7 +114,7 @@ namespace Log
 			return Logs(arg.first) + ": " + Logs(arg.second);
 		}
 
-		// Contatiners handling
+		// Contatiners concept
 		template <typename T>
 		concept Container = requires(T t)
 		{
@@ -124,9 +124,10 @@ namespace Log
 				requires !std::is_same_v<std::decay_t<T>, std::string>;
 		};
 
+		// containers handling
 		template <typename T>
 			requires Container<T>
-		static std::string Logs(T arg)
+		static std::string Logs(T& arg)
 		{
 			std::string result = "[";
 			for (auto it = arg.begin(); it != arg.end(); ++it)
@@ -139,37 +140,44 @@ namespace Log
 			return result;
 		}
 
-		// 
+		// perfect forwarding 
 		template <typename ... Types>
-		static std::string Logs(Types ... args)
+		static std::string Logs(Types&& ... args)
 		{
-			return (Logs(args) + ...);
+			return (Logs(std::forward<Types>(args)) + ...);
 		}
 
 	} // details namespace end
 
-	template < typename ... Types>
-	static void LogWarning(Types ... args)
-	{
-		std::string Message = "warning " + details::Logs(args...) + "\n";
-		::OutputDebugString(Message.c_str());
-	}
 
-	template < typename ... Types>
-	static void LogError(Types ... args)
+	// Main functions
+	template <typename ... Types>
+	static void LogWarning(Types&& ... args)
 	{
-		std::string Message = "error " + details::Logs(args...) + "\n";
+		std::string Message = "warning " + details::Logs(std::forward<Types>(args)...) + "\n";
 		::OutputDebugString(Message.c_str());
 	}
 
 	template <typename ... Types>
-	static void LogMessage(Types ... args)
+	static void LogError(Types&& ... args)
 	{
-		std::string Message = "information " + details::Logs(args...) + "\n";
+		std::string Message = "error " + details::Logs(std::forward<Types>(args)...) + "\n";
+		::OutputDebugString(Message.c_str());
+	}
+
+	template <typename ... Types>
+	static void LogMessage(Types&& ... args)
+	{
+		std::string Message = "information " + details::Logs(std::forward<Types>(args)...) + "\n";
 		::OutputDebugString(Message.c_str());
 	}
 
 }
+
+struct TestStruct
+{
+	std::string name{ "KURWA" };
+};
 
 
 int main()
@@ -239,6 +247,10 @@ int main()
 	UnorderedMap[22] = false;
 	UnorderedMap[111] = false;
 	Log::LogMessage("Unordered Map ", UnorderedMap);
+
+	std::unique_ptr<TestStruct> testUnique = std::make_unique<TestStruct>();
+	//Log::LogMessage("test unique - ", testUnique)
+
 
 	return 1;
 }
