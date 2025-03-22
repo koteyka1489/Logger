@@ -35,7 +35,7 @@ namespace Log
 			requires std::is_same_v<std::decay_t<T>, std::nullptr_t>
 		static std::string Logs(T arg)
 		{
-			return " IS NULLPTR";
+			return " Is Nullptr";
 		}
 
 		template <typename T>
@@ -46,7 +46,7 @@ namespace Log
 		}
 
 		template <typename T>
-			requires std::is_pointer_v<T> && (!std::is_same_v<std::decay_t<T>, const char*>)
+			requires std::is_pointer_v<T> && (!std::is_same_v<T, const char*>)
 		static std::string Logs(T arg)
 		{
 			if (arg)
@@ -56,7 +56,7 @@ namespace Log
 			}
 			else
 			{
-				return std::string(" IS NULL PTR");
+				return std::string(" is nullptr ");
 			}
 		}
 
@@ -69,7 +69,24 @@ namespace Log
 		template <>
 		static std::string Logs<const char*>(const char* arg)
 		{
+			if (!arg) return " Is nullptr";
+
 			return std::string(arg);
+		}
+
+		template <>
+		static std::string Logs<const wchar_t*>(const wchar_t* arg)
+		{
+			if (!arg) return " Is nullptr";
+
+			int size = WideCharToMultiByte(CP_UTF8, 0, arg, -1, nullptr, 0, nullptr, nullptr);
+			if (size == 0)
+				return " Conversion error ";
+
+			std::string result(size - 1, '\0'); 
+			WideCharToMultiByte(CP_UTF8, 0, arg, -1, &result[0], size, nullptr, nullptr);
+
+			return result;
 		}
 
 		template <>
@@ -92,18 +109,6 @@ namespace Log
 	
 		template <>
 		static std::string Logs<wchar_t>(wchar_t arg)
-		{
-			return std::string(1, static_cast<char>(arg)); 
-		}
-
-		template <>
-		static std::string Logs<char16_t>(char16_t arg)
-		{
-			return std::string(1, static_cast<char>(arg)); 
-		}
-
-		template <>
-		static std::string Logs<char32_t>(char32_t arg)
 		{
 			return std::string(1, static_cast<char>(arg)); 
 		}
@@ -147,30 +152,39 @@ namespace Log
 			return (Logs(std::forward<Types>(args)) + ...);
 		}
 
+		// Main functions
+		template <typename ... Types>
+		static void LogWarning(Types&& ... args)
+		{
+			std::string message;
+			message.reserve(128);
+			message = "warning " + Logs(std::forward<Types>(args)...) + "\n";
+			::OutputDebugString(message.c_str());
+		}
+
+		template <typename ... Types>
+		static void LogError(Types&& ... args)
+		{
+			std::string message;
+			message.reserve(128);
+			message = "error " + Logs(std::forward<Types>(args)...) + "\n";
+			::OutputDebugString(message.c_str());
+		}
+
+		template <typename ... Types>
+		static void LogMessage(Types&& ... args)
+		{
+			std::string message;
+			message.reserve(128);
+			message = "information " + Logs(std::forward<Types>(args)...) + "\n";
+			::OutputDebugString(message.c_str());
+		}
 	} // details namespace end
 
 
-	// Main functions
-	template <typename ... Types>
-	static void LogWarning(Types&& ... args)
-	{
-		std::string Message = "warning " + details::Logs(std::forward<Types>(args)...) + "\n";
-		::OutputDebugString(Message.c_str());
-	}
-
-	template <typename ... Types>
-	static void LogError(Types&& ... args)
-	{
-		std::string Message = "error " + details::Logs(std::forward<Types>(args)...) + "\n";
-		::OutputDebugString(Message.c_str());
-	}
-
-	template <typename ... Types>
-	static void LogMessage(Types&& ... args)
-	{
-		std::string Message = "information " + details::Logs(std::forward<Types>(args)...) + "\n";
-		::OutputDebugString(Message.c_str());
-	}
+#define LOG_WARNING(...) details::LogWarning( __FILE__, __LINE__, __VA_ARGS__)
+#define LOG_ERROR(...) details::LogError( __FILE__, __LINE__, __VA_ARGS__)
+#define LOG_MESSAGE(...) details::LogMessage( __FILE__, __LINE__, __VA_ARGS__)
 
 }
 
@@ -182,75 +196,78 @@ struct TestStruct
 
 int main()
 {
+	using namespace Log;
 	int a = 7;
 	int* ptr = &a;
 	void* ptrVoid = nullptr;
 
-	Log::LogWarning(" Vector X -", 1.0, " --- Is  ", true);
-	Log::LogError("poiner - ", ptr, " ");
-	Log::LogMessage("QUAT - W ", 0.56564, " X -  ", 0.12321, " Y - ", 1, " Z - ", 0.777777777777);
-	Log::LogMessage("  ", ' ', "wdw", " ", nullptr, -556494949);
-	Log::LogMessage("Void PTR", ptrVoid, &ptrVoid, 1525555.005255555555555555);
-	Log::LogMessage(); 
-	Log::LogMessage(""); 
-	Log::LogMessage("Empty string test: ", ""); 
+	LOG_WARNING("dwdwdw");
+
+	LOG_WARNING(" Vector X -", 1.0, " --- Is  ", true);
+	LOG_WARNING("poiner - ", ptr, " ");
+	LOG_MESSAGE("QUAT - W ", 0.56564, " X -  ", 0.12321, " Y - ", 1, " Z - ", 0.777777777777);
+	LOG_MESSAGE("  ", ' ', "wdw", " ", nullptr, -556494949);
+	LOG_MESSAGE("Void PTR", ptrVoid, &ptrVoid, 1525555.005255555555555555);
+	LOG_MESSAGE(); 
+	LOG_MESSAGE(""); 
+	LOG_MESSAGE("Empty string test: ", ""); 
 
 	double d = 3.14;
 	double* ptrD = &d;
 
-	Log::LogMessage("Double pointer - ", ptrD); 
-	Log::LogMessage("Nullptr test - ", nullptr); 
-	Log::LogMessage("Void pointer - ", static_cast<void*>(ptrD)); 
-
-	Log::LogMessage("Int max - ", std::numeric_limits<int>::max);
-	Log::LogMessage("Int min - ", std::numeric_limits<int>::min);
-	Log::LogMessage("Float epsilon - ", std::numeric_limits<float>::epsilon());
-	Log::LogMessage("Double infinity - ", std::numeric_limits<double>::infinity());
-	Log::LogMessage("Negative zero - ", -0.0);
-
-	Log::LogMessage("String literal - ", "Hello, World!");
-	Log::LogMessage("StdString - ", std::string("Hello, World!"));
-	Log::LogMessage("Special chars - ", "Newline:\nTab:\tQuote:\"");
-
-	Log::LogMessage("True test - ", true);
-	Log::LogMessage("False test - ", false);
-	Log::LogMessage("Expression test - ", 42 > 0); 
-	Log::LogMessage("Expression test - ", 0 == 1); 
-
-	Log::LogMessage("Char test - ", 'A');
-	Log::LogMessage("Wide char test - ", L'Ω'); 
-	Log::LogMessage("Special char test - ", '\t', " ddd"); 
-	Log::LogMessage("Non-printable char test - ", '\x01', " END"); 
+	LOG_MESSAGE("Double pointer - ", ptrD); 
+	LOG_MESSAGE("Nullptr test - ", nullptr); 
+	LOG_MESSAGE("Void pointer - ", static_cast<void*>(ptrD)); 
+	LOG_MESSAGE("Int max - ", std::numeric_limits<int>::max);
+	LOG_MESSAGE("Int min - ", std::numeric_limits<int>::min);
+	LOG_MESSAGE("Float epsilon - ", std::numeric_limits<float>::epsilon());
+	LOG_MESSAGE("Double infinity - ", std::numeric_limits<double>::infinity());
+	LOG_MESSAGE("Negative zero - ", -0.0);
+	LOG_MESSAGE("String literal - ", "Hello, World!");
+	LOG_MESSAGE("StdString - ", std::string("Hello, World!"));
+	LOG_MESSAGE("Special chars - ", "Newline:\nTab:\tQuote:\"");
+	LOG_MESSAGE("True test - ", true);
+	LOG_MESSAGE("False test - ", false);
+	LOG_MESSAGE("Expression test - ", 42 > 0); 
+	LOG_MESSAGE("Expression test - ", 0 == 1); 
+	LOG_MESSAGE("Char test - ", 'A');
+	LOG_MESSAGE("Wide char test - ", L'Ω'); 
+	LOG_MESSAGE("Special char test - ", '\t', " ddd"); 
+	LOG_MESSAGE("Non-printable char test - ", '\x01', " END"); 
 
 	int arr[] = { 1, 2, 3 };
-	Log::LogMessage("Array pointer - ", arr); 
+	LOG_MESSAGE("Array pointer - ", arr);
 
-	Log::LogMessage(
+	LOG_MESSAGE(
 		"Many arguments: ",
 		1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
 		"a", "b", "c", "d", "e", "f", "g", "h", "i", "j"
 	);
 
-	Log::LogMessage("C++20 format test - ", std::format("Formatted: {}", 42));
+	LOG_MESSAGE("C++20 format test - ", std::format("Formatted: {}", 42));
 
 	std::vector<int> vecI = { 1, 2, 3, 4 };
 	std::vector<float> vecF = { 1.011f, 202.0522f, 3.000001f, 4.0017f };
-	Log::LogMessage("Vector Int: ", vecI);
-	Log::LogMessage("Vector Float: ", vecF);
+	LOG_WARNING("Vector Int: ", vecI);
+	LOG_WARNING("Vector Float: ", vecF);
 
 	std::array<bool, 4> ArrayB= { false, true, false, true };
-	Log::LogMessage("Array Bools: ", ArrayB);
+	LOG_WARNING("Array Bools: ", ArrayB);
 
 	std::unordered_map<int, bool> UnorderedMap;
 	UnorderedMap[0] = false;
 	UnorderedMap[1] = true;
 	UnorderedMap[22] = false;
 	UnorderedMap[111] = false;
-	Log::LogMessage("Unordered Map ", UnorderedMap);
+	LOG_WARNING("Unordered Map ", UnorderedMap);
 
 	std::unique_ptr<TestStruct> testUnique = std::make_unique<TestStruct>();
-	//Log::LogMessage("test unique - ", testUnique)
+	std::unique_ptr<TestStruct> testUniqueNull = nullptr;
+	LOG_MESSAGE("test unique - ", testUnique.get());
+	LOG_MESSAGE("test unique - ", testUniqueNull.get());
 
+	LOG_ERROR("Adress W - ", L"D:\Logger\Logger");
+	LOG_ERROR("Adress  - ", "D:\Logger\Logger");
 
 	return 1;
 }
