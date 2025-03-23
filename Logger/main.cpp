@@ -17,18 +17,20 @@ namespace Log
 	namespace details
 	{
 
-		static std::string Logs()
-		{
-			return "";
-		}
+
 
 		template <typename T>
 			requires std::is_convertible_v<T, std::string> &&
 			(!std::is_same_v<std::decay_t<T>, void*>) &&
 			(!std::is_same_v<std::decay_t<T>, std::nullptr_t>)
-		static std::string Logs(T arg)
+		static std::string Logs(T&& arg)
 		{
-			return std::string(arg);
+			return std::string(std::forward<T>(arg));
+		}
+
+		static std::string Logs()
+		{
+			return "";
 		}
 
 		template <typename T>
@@ -66,8 +68,8 @@ namespace Log
 			return arg ? " TRUE " : " FALSE ";
 		}
 
-		template <>
-		static std::string Logs<const char*>(const char* arg)
+
+		static std::string Logs(const char* arg)
 		{
 			if (!arg) return " Is nullptr";
 
@@ -83,7 +85,7 @@ namespace Log
 			if (size == 0)
 				return " Conversion error ";
 
-			std::string result(size - 1, '\0'); 
+			std::string result(size - 1, '\0');
 			WideCharToMultiByte(CP_UTF8, 0, arg, -1, &result[0], size, nullptr, nullptr);
 
 			return result;
@@ -93,6 +95,24 @@ namespace Log
 		static std::string Logs<std::string&>(std::string& arg)
 		{
 			return arg;
+		}
+
+		static std::string Logs(std::wstring& arg)
+		{
+			if (arg.empty()) {
+				return std::string();
+			}
+
+			int size = WideCharToMultiByte(CP_UTF8, 0, arg.c_str(), -1, nullptr, 0, nullptr, nullptr);
+			if (size == 0) {
+				throw std::runtime_error("Failed to convert wstring to string");
+			}
+
+			// Создаем буфер для результата
+			std::string result(size - 1, '\0'); // size - 1, чтобы исключить завершающий ноль
+			WideCharToMultiByte(CP_UTF8, 0, arg.c_str(), -1, &result[0], size, nullptr, nullptr);
+
+			return result;
 		}
 
 		template <>
@@ -106,11 +126,11 @@ namespace Log
 		{
 			return std::string(1, arg);
 		}
-	
+
 		template <>
 		static std::string Logs<wchar_t>(wchar_t arg)
 		{
-			return std::string(1, static_cast<char>(arg)); 
+			return std::string(1, static_cast<char>(arg));
 		}
 
 		template <typename Key, typename Value>
@@ -127,6 +147,7 @@ namespace Log
 			t.end();
 				requires std::input_iterator<decltype(t.begin())>;
 				requires !std::is_same_v<std::decay_t<T>, std::string>;
+				requires !std::is_same_v<std::decay_t<T>, std::wstring>;
 		};
 
 		// containers handling
@@ -191,16 +212,16 @@ int main()
 	LOG_MESSAGE("QUAT - W ", 0.56564, " X -  ", 0.12321, " Y - ", 1, " Z - ", 0.777777777777);
 	LOG_MESSAGE("  ", ' ', "wdw", " ", nullptr, -556494949);
 	LOG_MESSAGE("Void PTR", ptrVoid, &ptrVoid, 1525555.005255555555555555);
-	LOG_MESSAGE(); 
-	LOG_MESSAGE(""); 
-	LOG_MESSAGE("Empty string test: ", ""); 
+	LOG_MESSAGE();
+	LOG_MESSAGE("");
+	LOG_MESSAGE("Empty string test: ", "");
 
 	double d = 3.14;
 	double* ptrD = &d;
 
-	LOG_MESSAGE("Double pointer - ", ptrD); 
-	LOG_MESSAGE("Nullptr test - ", nullptr); 
-	LOG_MESSAGE("Void pointer - ", static_cast<void*>(ptrD)); 
+	LOG_MESSAGE("Double pointer - ", ptrD);
+	LOG_MESSAGE("Nullptr test - ", nullptr);
+	LOG_MESSAGE("Void pointer - ", static_cast<void*>(ptrD));
 	LOG_MESSAGE("Int max - ", std::numeric_limits<int>::max);
 	LOG_MESSAGE("Int min - ", std::numeric_limits<int>::min);
 	LOG_MESSAGE("Float epsilon - ", std::numeric_limits<float>::epsilon());
@@ -211,12 +232,12 @@ int main()
 	LOG_MESSAGE("Special chars - ", "Newline:\nTab:\tQuote:\"");
 	LOG_MESSAGE("True test - ", true);
 	LOG_MESSAGE("False test - ", false);
-	LOG_MESSAGE("Expression test - ", 42 > 0); 
-	LOG_MESSAGE("Expression test - ", 0 == 1); 
+	LOG_MESSAGE("Expression test - ", 42 > 0);
+	LOG_MESSAGE("Expression test - ", 0 == 1);
 	LOG_MESSAGE("Char test - ", 'A');
-	LOG_MESSAGE("Wide char test - ", L'Ω'); 
-	LOG_MESSAGE("Special char test - ", '\t', " ddd"); 
-	LOG_MESSAGE("Non-printable char test - ", '\x01', " END"); 
+	LOG_MESSAGE("Wide char test - ", L'Ω');
+	LOG_MESSAGE("Special char test - ", '\t', " ddd");
+	LOG_MESSAGE("Non-printable char test - ", '\x01', " END");
 
 	int arr[] = { 1, 2, 3 };
 	LOG_MESSAGE("Array pointer - ", arr);
@@ -230,7 +251,7 @@ int main()
 	LOG_WARNING("Vector Int: ", vecI);
 	LOG_WARNING("Vector Float: ", vecF);
 
-	std::array<bool, 4> ArrayB= { false, true, false, true };
+	std::array<bool, 4> ArrayB = { false, true, false, true };
 	LOG_WARNING("Array Bools: ", ArrayB);
 
 	std::unordered_map<int, bool> UnorderedMapIntBool;
@@ -253,8 +274,11 @@ int main()
 	LOG_MESSAGE("test unique - ", testUnique.get());
 	LOG_MESSAGE("test unique - ", testUniqueNull.get());
 
-	LOG_ERROR("Adress W - ", L"D:\Logger\Logger");
-	LOG_ERROR("Adress  - ", "D:\Logger\Logger");
+	LOG_ERROR("Adress W - ", L"D:\\Logger\\Logger");
+	LOG_ERROR("Adress  - ", "D:\\Logger\\Logger");
+
+	std::wstring path = L"D:\\boxyboi\\License";
+	LOG_MESSAGE(path);
 
 	return 1;
 }
