@@ -154,37 +154,20 @@ namespace Log
 
 		// Main functions
 		template <typename ... Types>
-		static void LogWarning(Types&& ... args)
+		static void LogMain(Types&& ... args)
 		{
 			std::string message;
 			message.reserve(128);
-			message = "warning " + Logs(std::forward<Types>(args)...) + "\n";
+			message = Logs(std::forward<Types>(args)...) + "\n";
 			::OutputDebugString(message.c_str());
 		}
 
-		template <typename ... Types>
-		static void LogError(Types&& ... args)
-		{
-			std::string message;
-			message.reserve(128);
-			message = "error " + Logs(std::forward<Types>(args)...) + "\n";
-			::OutputDebugString(message.c_str());
-		}
-
-		template <typename ... Types>
-		static void LogMessage(Types&& ... args)
-		{
-			std::string message;
-			message.reserve(128);
-			message = "information " + Logs(std::forward<Types>(args)...) + "\n";
-			::OutputDebugString(message.c_str());
-		}
 	} // details namespace end
 
 
-#define LOG_WARNING(...) details::LogWarning( __FILE__, __LINE__, __VA_ARGS__)
-#define LOG_ERROR(...) details::LogError( __FILE__, __LINE__, __VA_ARGS__)
-#define LOG_MESSAGE(...) details::LogMessage( __FILE__, __LINE__, __VA_ARGS__)
+#define LOG_WARNING(...) details::LogMain("warning ", __FILE__, __LINE__, __VA_ARGS__)
+#define LOG_ERROR(...) details::LogMain("error ", __FILE__, __LINE__, __VA_ARGS__)
+#define LOG_MESSAGE(...) details::LogMain("information ", __FILE__, __LINE__, __VA_ARGS__)
 
 }
 
@@ -257,20 +240,12 @@ int main()
 	UnorderedMapIntBool[111] = false;
 	LOG_WARNING("Unordered Map ", UnorderedMapIntBool);
 
-	std::unordered_map<std::string, std::vector<float>> UnorderedMapStringVector;
-	UnorderedMapStringVector["ODIN"].push_back(15.6666f);
-	UnorderedMapStringVector["ODIN"].push_back(666.6666f);
-	UnorderedMapStringVector["ODIN"].push_back(999.6666f);
-	UnorderedMapStringVector["ODIN"].push_back(555555.6666f);
-	UnorderedMapStringVector["DVA"].push_back(0.22222f);
-	UnorderedMapStringVector["DVA"].push_back(0.23223f);
-	UnorderedMapStringVector["DVA"].push_back(0.555522f);
+
 	LOG_ERROR(
 		"Many arguments: ",
 		1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "\n",
 		"ERROR ", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "\t", false, 1 > 0, nullptr, NULL, "ZOPA", ' ', "", "END", "\n",
-		UnorderedMapIntBool, "\n",
-		UnorderedMapStringVector
+		UnorderedMapIntBool, "\n"
 	);
 
 	std::unique_ptr<TestStruct> testUnique = std::make_unique<TestStruct>();
